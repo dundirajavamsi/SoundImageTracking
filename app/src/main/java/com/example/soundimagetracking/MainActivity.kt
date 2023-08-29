@@ -32,7 +32,9 @@ import androidx.lifecycle.LifecycleOwner
 import com.google.android.material.snackbar.Snackbar
 import java.io.File
 import java.text.SimpleDateFormat
+import java.util.LinkedList
 import java.util.Locale
+import java.util.Queue
 import java.util.concurrent.Executors
 import kotlin.math.log10
 
@@ -54,9 +56,11 @@ class MainActivity : AppCompatActivity(),LifecycleOwner {
     private lateinit var imageCapture: ImageCapture
     private lateinit var outputDirectory: File
 
-    val threshold = 80
-    val alertDuration = 3000;
-    var deciblesList = arrayListOf<Int>()
+    private val threshold = 80
+    private val audioTiming = 2000
+    private val measuringFrequency = 200
+    private val averageDecibelValuesListLength = audioTiming/measuringFrequency
+    private val queue: Queue<Double> = LinkedList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -286,26 +290,21 @@ class MainActivity : AppCompatActivity(),LifecycleOwner {
             Log.i("AUDIO VAMSI","Coming maxAmplitude in decible ${amplitudeToDecibel(amplitude)}");
             val audioInDecible = amplitudeToDecibel(amplitude)
             textView?.text = "Auido Level in decibles: $audioInDecible"
-            if(showAudioLevelToast(audioInDecible)){
+            if(showAudioAlert(audioInDecible)){
                 Snackbar.make(findViewById(android.R.id.content), "Alert: Some alert message here!", Snackbar.LENGTH_SHORT).setTextColor(Color.WHITE).setBackgroundTint(Color.RED).show()
             }
-            handler.postDelayed(this, 1000) // Adjust the delay as needed
+            handler.postDelayed(this, measuringFrequency.toLong()) // Adjust the delay as needed
         }
     }
 
-    private fun showAudioLevelToast(audioInDecible : Double) : Boolean{
-        if(deciblesList.size >= (alertDuration/1000)){
-            deciblesList.removeAt(0)
+    private fun showAudioAlert(audioInDecibel: Double): Boolean {
+        if (queue.size >= averageDecibelValuesListLength) {
+            queue.poll()
         }
-        if(audioInDecible > threshold){
-            deciblesList.add(1)
-        }else{
-            deciblesList.add(0)
-        }
+        queue.add(audioInDecibel)
 
-        var sum = deciblesList.sum()
-        if (deciblesList.size == (alertDuration / 1000) && sum == (alertDuration / 1000)) {
-            deciblesList.clear()
+        val average = queue.sum() / queue.size
+        if (queue.size == averageDecibelValuesListLength && average >= threshold) {
             return true;
         }
         return false;
