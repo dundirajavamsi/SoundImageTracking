@@ -256,7 +256,11 @@ class MainActivity : AppCompatActivity(),LifecycleOwner {
 
     private fun setUpMediaPlayer(){
         // Initialize MediaRecorder
-        mediaRecorder = MediaRecorder();
+        mediaRecorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            MediaRecorder(this)
+        }else{
+            MediaRecorder()
+        }
         mediaRecorder?.setAudioSource(MediaRecorder.AudioSource.MIC)
         mediaRecorder?.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
         mediaRecorder?.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
@@ -284,12 +288,9 @@ class MainActivity : AppCompatActivity(),LifecycleOwner {
 
     private val updateAmplitudeTask = object : Runnable {
         override fun run() {
-            var amplitude = mediaRecorder?.maxAmplitude
-            if(amplitude == null) amplitude = 0
-            Log.i("AUDIO VAMSI","Coming maxAmplitude in int $amplitude");
-            Log.i("AUDIO VAMSI","Coming maxAmplitude in decible ${amplitudeToDecibel(amplitude)}");
+            val amplitude = mediaRecorder?.maxAmplitude?:0
             val audioInDecible = amplitudeToDecibel(amplitude)
-            textView?.text = "Auido Level in decibles: $audioInDecible"
+            textView?.text = "Audio Level in decibels: $audioInDecible"
             if(showAudioAlert(audioInDecible)){
                 Snackbar.make(findViewById(android.R.id.content), "Alert: Some alert message here!", Snackbar.LENGTH_SHORT).setTextColor(Color.WHITE).setBackgroundTint(Color.RED).show()
             }
